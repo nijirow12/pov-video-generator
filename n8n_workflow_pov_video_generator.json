@@ -1,0 +1,555 @@
+{
+    "name": "POV Video Generator - Personal Use",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "pov-video-generation",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                -640,
+                420
+            ],
+            "id": "webhook-trigger-001",
+            "name": "Webhook Trigger",
+            "notes": "Receives video generation requests from React app"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract and validate input data\nconst input = items[0].json.body || items[0].json;\n\nif (!input.idea || !input.environmentPrompt) {\n  throw new Error('Missing required fields: idea and environmentPrompt');\n}\n\nreturn [\n  {\n    json: {\n      idea: input.idea,\n      environment_prompt: input.environmentPrompt,\n      projectId: `project_${Date.now()}`,\n      timestamp: new Date().toISOString()\n    }\n  }\n];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -480,
+                420
+            ],
+            "id": "process-input-001",
+            "name": "Process Input"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.idea }}",
+                "hasOutputParser": true,
+                "messages": {
+                    "messageValues": [
+                        {
+                            "message": "=Your outputs NEVER include double-quotes. \n\nYou are an advanced prompt-generation AI specializing in crafting highly detailed and hyper-realistic POV (point of view) image prompt ideas. Your task is to generate concise, action-driven, immersive prompt ideas that follow a sequential narrative, depicting a \"day in the life\" experience based on a given video topic. \n\nYou can skip the part on waking up from bed.\nDon't output actions related to wearing clothing.\nDon't output actions related to using feet.\nYou also prioritize more sensational and unique scenes for that given scenario, instead of common things people do generally\n\nGuidelines:\nEvery output represents a first-person perspective, making the viewer feel like they are experiencing the moment.\nUse action-based verbs like gripping, running, reaching, holding, walking toward, stumbling, climbing, lifting, turning, stepping into.\nUse keywords such as POV, GoPro-style, first-person view, point of view to reinforce immersion.\nKeep all outputs between 5 to 10 words long.\nNever use double quotes in any output.\nAll scenes must be hyper-realistic, high quality, and cinematic, evoking strong visual and emotional impact.\nEach set of prompts must follow a logical sequence, covering a full day in the life from morning to night, ensuring narrative continuity.\n\nAvoid introspection or vague descriptions—focus on physical actions and interactions that build a cohesive, immersive story.\n\nExamples:\nTopic: A Peasant's Day in Medieval Europe\nPushing open a wooden cottage door\nScooping water from a village well\nKneeling to tie worn leather shoes\nWalking through a bustling market square\nHanding a silver coin to a merchant\nCarrying a sack of wheat up a hill\nHammering nails into a wooden fence\nStirring stew over a crackling fire\nPlacing a candle by the bedside\n\nEach generated sequence tells a visual story, pulling the viewer into a cohesive first-person experience from start to finish."
+                        }
+                    ]
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.5,
+            "position": [
+                -320,
+                420
+            ],
+            "id": "generate-titles-001",
+            "name": "Generate Titles"
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "gpt-4o-mini"
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "typeVersion": 1.2,
+            "position": [
+                -300,
+                560
+            ],
+            "id": "openai-chat-model-001",
+            "name": "OpenAI Chat Model",
+            "credentials": {
+                "openAiApi": {
+                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "options": {
+                    "numberOfItems": 5
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.outputParserItemList",
+            "typeVersion": 1,
+            "position": [
+                -180,
+                560
+            ],
+            "id": "item-list-parser-001",
+            "name": "Item List Output Parser"
+        },
+        {
+            "parameters": {
+                "modelId": {
+                    "__rl": true,
+                    "value": "o1-mini",
+                    "mode": "list"
+                },
+                "messages": {
+                    "values": [
+                        {
+                            "content": "=You are an advanced prompt-generation AI specializing in expanding short POV (point-of-view) image prompt ideas into detailed, hyper-realistic prompts optimized for image-generation models like Flux and MidJourney.\n\nThis is the overall idea for the video: {{ $('Process Input').item.json.idea }}\nThis is the short prompt idea you need to expand upon: {{ $json.response.text }}\nEvery prompt must use this to describe the environment of the image: {{ $('Process Input').item.json.environment_prompt }}\n\nEvery prompt has three sections:\n1/ You always start the prompt with: {{ $('Process Input').item.json.idea }}\n2/ In the foreground, show and describe the hands, limbs, or feet of the viewer. this section must start with \"First person view POV GoPro shot of [relevant limb]...\"\n3/ In the background, describe the scenery. must start with \"In the background, [describe scenery]\"\n\nMost Important Guidelines:\nEvery image must be a first-person perspective shot—the viewer must feel like they are experiencing the moment themselves, not just observing it.\nA visible limb (hands or feet) must always be present and actively engaged in the environment—whether gripping, reaching, pushing, lifting, or interacting in a natural way.\nThe framing must be dynamic and interactive, mimicking real-world human vision—ensuring motion, depth, and immersion similar to a GoPro or head-mounted camera shot.\n\nKeep prompts under 1000 characters in a single, cinematic sentence with no extra formatting, explanations, or unnecessary output."
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.8,
+            "position": [
+                60,
+                60
+            ],
+            "id": "expand-prompts-001",
+            "name": "Expand Prompts",
+            "credentials": {
+                "openAiApi": {
+                    "id": "YOUR_OPENAI_CREDENTIAL_ID",
+                    "name": "OpenAI Account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.piapi.ai/api/v1/task",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-API-Key",
+                            "value": "YOUR_PIAPI_KEY"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "raw",
+                "rawContentType": "application/json",
+                "body": "={\n    \"model\": \"Qubico/flux1-dev\",\n    \"task_type\": \"txt2img\",\n    \"input\": {\n        \"prompt\": \"{{ $json.message.content }}\",\n        \"width\": 540,\n        \"height\": 960\n    }\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                200,
+                300
+            ],
+            "id": "text-to-image-001",
+            "name": "Text-to-Image"
+        },
+        {
+            "parameters": {
+                "amount": 3,
+                "unit": "minutes"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                360,
+                300
+            ],
+            "id": "wait-image-001",
+            "name": "Wait for Image",
+            "webhookId": "wait-image-webhook-001"
+        },
+        {
+            "parameters": {
+                "url": "=https://api.piapi.ai/api/v1/task/{{ $json.data.task_id }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-API-Key",
+                            "value": "YOUR_PIAPI_KEY"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                520,
+                300
+            ],
+            "id": "get-image-001",
+            "name": "Get Image"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.piapi.ai/api/v1/task",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-API-Key",
+                            "value": "YOUR_PIAPI_KEY"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "raw",
+                "rawContentType": "application/json",
+                "body": "={\n    \"model\": \"kling\",\n    \"mode\": \"pro\",\n    \"task_type\": \"video_generation\",\n    \"input\": {\n        \"prompt\": \"{{ $json.data.input.prompt }}\",\n        \"negative_prompt\": \"bad quality\",\n        \"cfg_scale\": 0.65,\n        \"duration\": 5,\n        \"image_url\": \"{{ $json.data.output.image_url }}\",\n        \"camera_control\": {\n            \"type\": \"simple\",\n            \"config\": {\n                \"horizontal\": 0,\n                \"vertical\": 0,\n                \"pan\": 0,\n                \"tilt\": 0,\n                \"roll\": 0,\n                \"zoom\": 0\n            }\n        }\n    },\n    \"config\": {}\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                680,
+                300
+            ],
+            "id": "image-to-video-001",
+            "name": "Image-to-Video"
+        },
+        {
+            "parameters": {
+                "amount": 10,
+                "unit": "minutes"
+            },
+            "type": "n8n-nodes-base.wait",
+            "typeVersion": 1.1,
+            "position": [
+                840,
+                300
+            ],
+            "id": "wait-video-001",
+            "name": "Wait for Video",
+            "webhookId": "wait-video-webhook-001"
+        },
+        {
+            "parameters": {
+                "url": "=https://api.piapi.ai/api/v1/task/{{ $json.data.task_id }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-API-Key",
+                            "value": "YOUR_PIAPI_KEY"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1000,
+                300
+            ],
+            "id": "get-video-001",
+            "name": "Get Video"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.elevenlabs.io/v1/sound-generation",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "xi-api-key",
+                            "value": "YOUR_ELEVENLABS_KEY"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "raw",
+                "rawContentType": "application/json",
+                "body": "={\n  \"text\": \"ambient musical background sounds for this person: {{ $('Process Input').first().json.idea }}, the action is: {{ $('Generate Titles').item.json.response.text }}\",\n  \"duration_seconds\": 5,\n  \"prompt_influence\": 0.75\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1160,
+                300
+            ],
+            "id": "text-to-sound-001",
+            "name": "Text-to-Sound"
+        },
+        {
+            "parameters": {
+                "mode": "combine",
+                "combineBy": "combineByPosition",
+                "numberInputs": 3,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3,
+            "position": [
+                1320,
+                420
+            ],
+            "id": "merge-001",
+            "name": "Merge"
+        },
+        {
+            "parameters": {
+                "jsCode": "const projectId = $('Process Input').item.json.projectId;\nconst baseUrl = process.env.N8N_BASE_URL || 'http://localhost:5678';\n\n// Collect all scene data\nconst scenes = items.map((item, index) => ({\n  title: item.json.response?.text || `Scene ${index + 1}`,\n  imageUrl: item.json.data?.output?.image_url || '',\n  videoUrl: item.json.data?.output?.video_url || '',\n  soundUrl: item.json.audio_url || ''\n}));\n\n// Prepare data for Creatomate\nconst scene_titles = scenes.map(s => s.title);\nconst video_urls = scenes.map(s => s.videoUrl);\nconst sound_urls = scenes.map(s => s.soundUrl);\n\nreturn [\n  {\n    json: {\n      projectId,\n      idea: $('Process Input').item.json.idea,\n      scene_titles,\n      video_urls,\n      sound_urls,\n      scenes\n    }\n  }\n];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1480,
+                420
+            ],
+            "id": "prepare-final-data-001",
+            "name": "Prepare Final Data"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.creatomate.com/v1/renders",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer YOUR_CREATOMATE_KEY"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "raw",
+                "rawContentType": "application/json",
+                "body": "={\n  \"template_id\": \"YOUR_TEMPLATE_ID\",\n  \"modifications\": {\n    \"Audio-1.source\": \"{{ $json.sound_urls[0] }}\",\n    \"Audio-2.source\": \"{{ $json.sound_urls[1] }}\",\n    \"Audio-3.source\": \"{{ $json.sound_urls[2] }}\",\n    \"Audio-4.source\": \"{{ $json.sound_urls[3] }}\",\n    \"Audio-5.source\": \"{{ $json.sound_urls[4] }}\",\n    \n    \"Video-1.source\": \"{{ $json.video_urls[0] }}\",\n    \"Video-2.source\": \"{{ $json.video_urls[1] }}\",\n    \"Video-3.source\": \"{{ $json.video_urls[2] }}\",\n    \"Video-4.source\": \"{{ $json.video_urls[3] }}\",\n    \"Video-5.source\": \"{{ $json.video_urls[4] }}\",\n    \n    \"Text-1.text\": \"{{ $json.idea }}\",\n    \"Text-2.text\": \"{{ $json.scene_titles[1] }}\",\n    \"Text-3.text\": \"{{ $json.scene_titles[2] }}\",\n    \"Text-4.text\": \"{{ $json.scene_titles[3] }}\",\n    \"Text-5.text\": \"{{ $json.scene_titles[4] }}\"\n  }\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1640,
+                420
+            ],
+            "id": "render-final-video-001",
+            "name": "Render Final Video",
+            "executeOnce": true
+        },
+        {
+            "parameters": {
+                "jsCode": "const result = items[0].json;\n\nreturn [\n  {\n    json: {\n      success: true,\n      projectId: $('Process Input').item.json.projectId,\n      idea: $('Process Input').item.json.idea,\n      videoUrl: result.url || result.video_url,\n      scenes: $('Prepare Final Data').item.json.scenes,\n      completedAt: new Date().toISOString()\n    }\n  }\n];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1800,
+                420
+            ],
+            "id": "final-response-001",
+            "name": "Final Response"
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Process Input",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Process Input": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Titles",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Generate Titles",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Item List Output Parser": {
+            "ai_outputParser": [
+                [
+                    {
+                        "node": "Generate Titles",
+                        "type": "ai_outputParser",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Titles": {
+            "main": [
+                [
+                    {
+                        "node": "Expand Prompts",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Expand Prompts": {
+            "main": [
+                [
+                    {
+                        "node": "Text-to-Image",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Text-to-Image": {
+            "main": [
+                [
+                    {
+                        "node": "Wait for Image",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait for Image": {
+            "main": [
+                [
+                    {
+                        "node": "Get Image",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Image": {
+            "main": [
+                [
+                    {
+                        "node": "Image-to-Video",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Image-to-Video": {
+            "main": [
+                [
+                    {
+                        "node": "Wait for Video",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wait for Video": {
+            "main": [
+                [
+                    {
+                        "node": "Get Video",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Video": {
+            "main": [
+                [
+                    {
+                        "node": "Text-to-Sound",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Merge",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "Text-to-Sound": {
+            "main": [
+                [
+                    {
+                        "node": "Merge",
+                        "type": "main",
+                        "index": 2
+                    }
+                ]
+            ]
+        },
+        "Merge": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Final Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Final Data": {
+            "main": [
+                [
+                    {
+                        "node": "Render Final Video",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Render Final Video": {
+            "main": [
+                [
+                    {
+                        "node": "Final Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "versionId": "personal-use-v1",
+    "meta": {
+        "instanceId": "pov-video-generator-personal"
+    },
+    "id": "pov-video-generator",
+    "tags": []
+}
