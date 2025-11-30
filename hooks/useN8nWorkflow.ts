@@ -14,7 +14,7 @@ export function useN8nWorkflow() {
         setError(null);
 
         try {
-            const response = await fetch('/api/n8n/trigger', {
+            const response = await fetch('/api/generate-simple', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
