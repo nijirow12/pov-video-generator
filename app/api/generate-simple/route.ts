@@ -7,10 +7,13 @@ const openai = new OpenAI({
 });
 
 export async function POST(request: Request) {
+    console.log('API Request received: /api/generate-simple');
     try {
         const { idea, environmentPrompt } = await request.json();
+        console.log('Request body parsed:', { idea, environmentPrompt });
 
         if (!idea || !environmentPrompt) {
+            console.log('Missing required fields');
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }
@@ -18,6 +21,7 @@ export async function POST(request: Request) {
         }
 
         const db = new ProjectDatabase();
+        console.log('Creating project in Firestore...');
 
         // プロジェクト作成
         const projectId = await db.createProject({
@@ -26,10 +30,15 @@ export async function POST(request: Request) {
             status: 'processing',
             createdAt: new Date(),
         });
+        console.log('Project created:', projectId);
 
         // バックグラウンドで処理
-        generateVideo(projectId, idea, environmentPrompt, db).catch(console.error);
+        console.log('Starting background generation...');
+        generateVideo(projectId, idea, environmentPrompt, db).catch(err => {
+            console.error('Background generation error:', err);
+        });
 
+        console.log('Returning success response');
         return NextResponse.json({
             success: true,
             projectId,
