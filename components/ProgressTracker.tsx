@@ -73,20 +73,36 @@ export function ProgressTracker({ projectId }: { projectId: string }) {
 
             {/* 完了 */}
             {project.status === 'completed' && project.videoUrl && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-green-800">✅ Video Generated!</h3>
-                    <video
-                        src={project.videoUrl}
-                        controls
-                        className="w-full rounded-lg shadow-lg"
-                    />
-                    <a
-                        href={project.videoUrl}
-                        download
-                        className="mt-4 inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-lg"
-                    >
-                        📥 Download Video
-                    </a>
+                <div className="space-y-6">
+                    {/* 動画説明の表示 */}
+                    {project.description && (
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700 shadow-lg">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <span className="text-2xl">✨</span>
+                                動画の説明
+                            </h3>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {project.description}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* 動画プレーヤー */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <h3 className="text-lg font-semibold mb-4 text-green-800">✅ Video Generated!</h3>
+                        <video
+                            src={project.videoUrl}
+                            controls
+                            className="w-full rounded-lg shadow-lg"
+                        />
+                        <a
+                            href={project.videoUrl}
+                            download
+                            className="mt-4 inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-lg"
+                        >
+                            📥 Download Video
+                        </a>
+                    </div>
                 </div>
             )}
 

@@ -60,15 +60,20 @@ async function generateVideo(
     db: ProjectDatabase
 ) {
     try {
-        // 1. シーンタイトル生成
+        // 1. n8nから動画の説明を取得
+        console.log('Fetching video description from n8n...');
+        const description = await getVideoDescription(idea, environmentPrompt);
+        console.log('Description received:', description);
+
+        // 2. シーンタイトル生成
         const titles = await generateSceneTitles(idea);
 
-        // 2. 各シーンの詳細プロンプト生成
+        // 3. 各シーンの詳細プロンプト生成
         const detailedPrompts = await Promise.all(
             titles.map((title) => generateDetailedPrompt(title, idea, environmentPrompt))
         );
 
-        // 3. モック画像・動画URLを生成
+        // 4. モック画像・動画URLを生成
         const scenes = titles.map((title, index) => ({
             title,
             imageUrl: `https://picsum.photos/seed/${projectId}-${index}/540/960`,
@@ -76,9 +81,10 @@ async function generateVideo(
             soundUrl: '',
         }));
 
-        // 4. 完了
+        // 5. 完了(説明を含む)
         await db.updateProject(projectId, {
             status: 'completed',
+            description,  // n8nから取得した説明を保存
             videoUrl: scenes[0].videoUrl,
             scenes,
             completedAt: new Date(),
@@ -89,6 +95,42 @@ async function generateVideo(
             status: 'failed',
             error: error instanceof Error ? error.message : 'Unknown error',
         });
+    }
+}
+
+async function getVideoDescription(
+    idea: string,
+    environmentPrompt: string
+): Promise<string> {
+    try {
+        // 環境変数からWebhook URLを取得(ローカル/本番で切り替え可能)
+        const webhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/test-chatgpt';
+
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: `以下の動画アイデアについて、魅力的な説明を100文字程度で作成してください。
+
+アイデア: ${idea}
+環境: ${environmentPrompt}
+
+視聴者が興味を持つような、ワクワクする説明をお願いします。`
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get description from n8n');
+        }
+
+        const data = await response.json();
+        console.log('n8n response:', data);
+
+        // n8nのレスポンス形式: { success: true, input: "...", response: "...", timestamp: "..." }
+        return data.response || data.message || data.body?.message || '素晴らしいPOV動画をお楽しみください!';
+    } catch (error) {
+        console.error('Failed to get description from n8n:', error);
+        return '素晴らしいPOV動画をお楽しみください!';
     }
 }
 

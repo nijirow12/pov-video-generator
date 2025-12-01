@@ -2,12 +2,13 @@ export interface Project {
     id: string;
     idea: string;
     environmentPrompt: string;
-    status: 'pending' | 'processing' | 'completed' | 'failed';
+    description?: string;  // n8nから取得した動画の説明
+    status: 'processing' | 'completed' | 'failed';
     videoUrl?: string;
     scenes?: Scene[];
+    error?: string;
     createdAt: Date;
     completedAt?: Date;
-    error?: string;
 }
 
 export interface Scene {
